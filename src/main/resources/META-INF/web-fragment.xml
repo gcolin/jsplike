@@ -1,0 +1,17 @@
+<web-fragment xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee
+                      http://xmlns.jcp.org/xml/ns/javaee/web-fragment_3_1.xsd"
+              version="3.1">
+    <name>jsp</name>
+    <servlet>
+		<servlet-name>jsp</servlet-name>
+		<servlet-class>net.gcolin.server.jsp.JspServlet</servlet-class>
+		<load-on-startup>0</load-on-startup>
+	</servlet>
+
+	<servlet-mapping>
+		<servlet-name>jsp</servlet-name>
+		<url-pattern>*.jsp</url-pattern>
+	</servlet-mapping>
+</web-fragment> 
