@@ -1,1 +1,2 @@
 rootProject.name = 'jsplike'
+include 'jsplike-ecj'
