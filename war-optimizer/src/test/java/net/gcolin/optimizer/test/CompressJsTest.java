@@ -1,4 +1,3 @@
-package net.gcolin.optimizer.test;
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
  * agreements. See the NOTICE file distributed with this work for additional information regarding
@@ -14,15 +13,15 @@ package net.gcolin.optimizer.test;
  * the License.
  */
 
+package net.gcolin.optimizer.test;
+
 import net.gcolin.common.io.Io;
 import net.gcolin.optimizer.CompressJs;
 
-import org.apache.maven.monitor.logging.DefaultLog;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.logging.Log;
-import org.codehaus.plexus.logging.console.ConsoleLogger;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -39,21 +38,23 @@ import java.util.Collections;
 public class CompressJsTest {
 
   @Test
-  public void simpleTest() throws MojoExecutionException, IOException {
+  public void simpleTest() throws IOException {
     Path target = Paths.get("target/compressjs");
     Io.deleteDir(target);
-    target.toFile().mkdirs();
+    Logger logger = LoggerFactory.getLogger(this.getClass());
+    if (target.toFile().mkdirs()) {
+      logger.debug("dir {} created", target);
+    }
     Io.copy(Paths.get("src/test/resources/compressjs"), target);
 
-    Log log = new DefaultLog(new ConsoleLogger());
-    new CompressJs().execute(target.toFile(), Collections.emptyMap(), log);
+    new CompressJs().execute(target.toFile(), Collections.emptyMap(), logger);
 
-    String b = "src/test/resources/compressjsexpected/";
-    String f = target.toString() + "/html/";
+    String exprected = "src/test/resources/compressjsexpected/";
+    String result = target.toString() + "/html/";
 
     for (String name : new String[] {"index.html", "index.js", "index1.js"}) {
-      Assert.assertArrayEquals(Files.readAllBytes(Paths.get(b + name)),
-          Files.readAllBytes(Paths.get(f + name)));
+      Assert.assertArrayEquals(Files.readAllBytes(Paths.get(exprected + name)),
+          Files.readAllBytes(Paths.get(result + name)));
     }
   }
 }

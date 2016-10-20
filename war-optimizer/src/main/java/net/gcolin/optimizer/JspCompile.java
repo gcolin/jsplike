@@ -18,10 +18,10 @@ package net.gcolin.optimizer;
 import net.gcolin.common.collection.Func;
 import net.gcolin.common.io.Io;
 import net.gcolin.common.lang.Pair;
+import net.gcolin.server.jsp.Compiler;
 import net.gcolin.server.jsp.internal.JspCompiler;
 
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.logging.Log;
+import org.slf4j.Logger;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -56,9 +56,9 @@ import java.util.Set;
  */
 public class JspCompile {
 
-  private Log log;
+  private Logger log;
 
-  public Log getLog() {
+  public Logger getLog() {
     return log;
   }
 
@@ -83,101 +83,108 @@ public class JspCompile {
    * @param war war
    * @param explodedLibs explodedLibs
    * @param log log
-   * @throws MojoExecutionException if an error occurs.
+   * @param compiler compiler
+   * @param cl cl
+   * @throws IOException if an error occurs.
    */
-  public void execute(File war, Map<String, File> explodedLibs, Log log)
-      throws MojoExecutionException {
+  public void execute(File war, Map<String, File> explodedLibs, Logger log, Compiler compiler,
+      ClassLoader cl) throws IOException {
     this.log = log;
 
-    try {
-      URL[] cpUrl = new URL[explodedLibs.size() + 1];
-      cpUrl[0] = new File(war, "WEB-INF/classes").toURI().toURL();
-      Iterator<File> it = explodedLibs.values().iterator();
-      for (int i = 1; i < cpUrl.length; i++) {
-        cpUrl[i] = it.next().toURI().toURL();
-      }
+    URL[] cpUrl = new URL[explodedLibs.size() + 1];
+    cpUrl[0] = new File(war, "WEB-INF/classes").toURI().toURL();
+    Iterator<File> it = explodedLibs.values().iterator();
+    for (int i = 1; i < cpUrl.length; i++) {
+      cpUrl[i] = it.next().toURI().toURL();
+    }
 
+    ClassLoader webAppClassLoader = cl;
+
+    if (webAppClassLoader == null) {
       Collection<URL> urls = getClasspath(JspCompile.class.getClassLoader());
       urls.addAll(Arrays.asList(cpUrl));
 
-      URLClassLoader webAppClassLoader =
-          AccessController.doPrivileged(new PrivilegedAction<URLClassLoader>() {
-            public URLClassLoader run() {
-              return new URLClassLoader(cpUrl, JspCompile.class.getClassLoader());
-            }
-          });
+      webAppClassLoader = AccessController.doPrivileged(new PrivilegedAction<URLClassLoader>() {
+        public URLClassLoader run() {
+          return new URLClassLoader(cpUrl, JspCompile.class.getClassLoader());
+        }
+      });
+    }
 
-      List<File> resources = new ArrayList<>();
+    List<File> resources = new ArrayList<>();
+    if (new File(war, "META-INF/web-fragment.xml").exists()) {
+      resources.add(new File(war, "META-INF/resources"));
+    } else {
       resources.add(war);
-      resources.addAll(Func.map(explodedLibs.values(), x -> new File(x, "META-INF/resources"),
-          x -> new File(x, "META-INF/resources").exists()));
-      final PathMatcher filter = FileSystems.getDefault().getPathMatcher("glob:**.{jsp}");
+    }
 
-      JspCompiler compiler = new JspCompiler(webAppClassLoader, false, true);
+    resources.addAll(Func.map(explodedLibs.values(), x -> new File(x, "META-INF/resources"),
+        x -> new File(x, "META-INF/resources").exists()));
+    final PathMatcher filter = FileSystems.getDefault().getPathMatcher("glob:**.{jsp}");
 
-      for (int i = 0; i < resources.size(); i++) {
-        File resource = resources.get(i);
-        servlets.clear();
+    JspCompiler jspcompiler = new JspCompiler(webAppClassLoader, false, true, compiler);
 
-        String rootPath = resource.getAbsolutePath();
-        if (!rootPath.endsWith(File.separatorChar + "")) {
-          rootPath += File.separatorChar;
-        }
-        final String rpath = rootPath;
+    for (int i = 0; i < resources.size(); i++) {
+      File resource = resources.get(i);
+      servlets.clear();
 
-        Set<String> ignorejsp = new HashSet<>();
-        File jspIgnore = new File(resource, "WEB-INF/jspignore.txt");
-        if (jspIgnore.exists()) {
-          ignorejsp.addAll(Files.readAllLines(jspIgnore.toPath()));
-        }
+      String rootPath = resource.getAbsolutePath();
+      if (!rootPath.endsWith(File.separatorChar + "")) {
+        rootPath += File.separatorChar;
+      }
+      final String rpath = rootPath;
 
-        List<String> paths = new ArrayList<>();
-        File workDir = resource.getParentFile().getParentFile();
-
-        Files.walkFileTree(resource.toPath(), new SimpleFileVisitor<Path>() {
-          @Override
-          public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-              throws IOException {
-            if (filter.matches(file)) {
-
-
-              String path =
-                  file.toFile().getAbsolutePath().substring(rpath.length()).replace('\\', '/');
-              if (ignorejsp.contains(path)) {
-                return FileVisitResult.CONTINUE;
-              }
-
-              paths.add(path);
-            }
-            return FileVisitResult.CONTINUE;
-          }
-        });
-
-        if (!paths.isEmpty()) {
-          getLog().info("compile " + paths.size() + " servlets to " + workDir);
-          JspCompileServletContext ctx =
-              new JspCompileServletContext(resources, webAppClassLoader, workDir);
-
-          Thread thread = Thread.currentThread();
-          ClassLoader current = thread.getContextClassLoader();
-          thread.setContextClassLoader(webAppClassLoader);
-          try {
-            Object[] servlet = compiler.buildServlet(paths.toArray(new String[paths.size()]), ctx);
-            for (int j = 0; j < servlet.length; j++) {
-              servlets.add(new Pair<>(servlet[j].getClass().getName(), paths.get(j)));
-            }
-
-          } finally {
-            thread.setContextClassLoader(current);
-          }
-        }
-
-        appenServletToWebXml(i, resource);
+      Set<String> ignorejsp = new HashSet<>();
+      File jspIgnore = new File(resource, "WEB-INF/jspignore.txt");
+      if (jspIgnore.exists()) {
+        ignorejsp.addAll(Files.readAllLines(jspIgnore.toPath()));
       }
 
-      Io.close(webAppClassLoader);
-    } catch (IOException ex) {
-      throw new MojoExecutionException(ex.getMessage(), ex);
+      List<String> paths = new ArrayList<>();
+      File workDir = resource.getParentFile().getParentFile();
+
+      Files.walkFileTree(resource.toPath(), new SimpleFileVisitor<Path>() {
+        @Override
+        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+          if (filter.matches(file)) {
+
+
+            String path =
+                file.toFile().getAbsolutePath().substring(rpath.length()).replace('\\', '/');
+            if (ignorejsp.contains(path)) {
+              return FileVisitResult.CONTINUE;
+            }
+
+            paths.add(path);
+          }
+          return FileVisitResult.CONTINUE;
+        }
+      });
+
+      if (!paths.isEmpty()) {
+        getLog().info("compile " + paths.size() + " servlets to " + workDir);
+        JspCompileServletContext ctx =
+            new JspCompileServletContext(resources, webAppClassLoader, workDir);
+
+        Thread thread = Thread.currentThread();
+        ClassLoader current = thread.getContextClassLoader();
+        thread.setContextClassLoader(webAppClassLoader);
+        try {
+          Object[] servlet = jspcompiler.buildServlet(paths.toArray(new String[paths.size()]), ctx);
+          for (int j = 0; j < servlet.length; j++) {
+            servlets.add(new Pair<>(servlet[j].getClass().getName(), paths.get(j)));
+          }
+
+        } finally {
+          thread.setContextClassLoader(current);
+        }
+      }
+
+      appenServletToWebXml(i, resource);
+    }
+
+    if (webAppClassLoader instanceof URLClassLoader) {
+      Io.close((URLClassLoader) webAppClassLoader);
     }
   }
 
@@ -185,11 +192,11 @@ public class JspCompile {
     if (!servlets.isEmpty()) {
       String fragment = buildFragment(servlets);
 
-      if (nb == 0) {
-        WebXmlUtil.append(new File(resource, "WEB-INF/web.xml"), fragment);
-      } else {
-        WebXmlUtil.append(new File(resource, "../web-fragment.xml"), fragment);
+      File webXml = new File(resource, "WEB-INF/web.xml");
+      if (!webXml.exists()) {
+        webXml = new File(resource, "../web-fragment.xml");
       }
+      WebXmlUtil.append(webXml, fragment);
     }
   }
 

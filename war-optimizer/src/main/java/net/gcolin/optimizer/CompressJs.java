@@ -26,8 +26,7 @@ import com.google.javascript.jscomp.SourceFile;
 
 import net.gcolin.common.collection.Func;
 
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.logging.Log;
+import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,8 +45,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Find javascript files in html or jsp, assemble them, 
- * compress them with Closure.
+ * Find javascript files in html or jsp, assemble them, compress them with Closure.
  * 
  * @author Gaël COLIN
  * @since 1.0
@@ -70,7 +68,7 @@ public class CompressJs {
 
   private List<File> resources;
   private File errorDirectory;
-  private Log log;
+  private Logger log;
 
   /**
    * Execute the compress js on a war.
@@ -78,47 +76,46 @@ public class CompressJs {
    * @param war war
    * @param explodedLibs explodedLibs
    * @param log log
-   * @throws MojoExecutionException if an error occurs
+   * @throws IOException if an error occurs
    */
-  public void execute(File war, Map<String, File> explodedLibs, Log log)
-      throws MojoExecutionException {
+  public void execute(File war, Map<String, File> explodedLibs, Logger log) throws IOException {
     this.log = log;
     errorDirectory = new File(war.getParentFile(), "optimizer/jserror");
     final PathMatcher filter =
         FileSystems.getDefault().getPathMatcher("glob:**.{" + FILE_EXTENSIONS + "}");
     resources = new ArrayList<>();
-    resources.add(war);
+    if (new File(war, "META-INF/web-fragment.xml").exists()) {
+      if (new File(war, "META-INF/resources").exists()) {
+        resources.add(new File(war, "META-INF/resources"));
+      }
+    } else {
+      resources.add(war);
+    }
     resources.addAll(Func.map(explodedLibs.values(), x -> new File(x, "META-INF/resources"),
         x -> new File(x, "META-INF/resources").exists()));
-    try {
-      for (File resource : resources) {
-        Files.walkFileTree(resource.toPath(), new SimpleFileVisitor<Path>() {
-          @Override
-          public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-              throws IOException {
-            extractScripts0(filter, file);
-            return FileVisitResult.CONTINUE;
-          }
+    for (File resource : resources) {
+      Files.walkFileTree(resource.toPath(), new SimpleFileVisitor<Path>() {
+        @Override
+        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+          extractScripts0(filter, file);
+          return FileVisitResult.CONTINUE;
+        }
 
-          private void extractScripts0(final PathMatcher filter, Path file) throws IOException {
-            if (filter.matches(file)) {
-              CompressJsContext data =
-                  new CompressJsContext(file, readFile(file), resource.toPath());
-              extractScripts(data);
-              if (!data.getScriptParts().isEmpty()) {
-                compress(data);
-              }
+        private void extractScripts0(final PathMatcher filter, Path file) throws IOException {
+          if (filter.matches(file)) {
+            CompressJsContext data = new CompressJsContext(file, readFile(file), resource.toPath());
+            extractScripts(data);
+            if (!data.getScriptParts().isEmpty()) {
+              compress(data);
             }
           }
+        }
 
-        });
-      }
-    } catch (IOException ex) {
-      throw new MojoExecutionException(ex.getMessage(), ex);
+      });
     }
   }
 
-  public Log getLog() {
+  public Logger getLog() {
     return log;
   }
 

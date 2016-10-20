@@ -32,6 +32,8 @@ allprojects {
 	    exclude '**/*.txt'
 	    exclude '**/*.xml'
 	    exclude '**/*.jsp'
+	    exclude '**/*.js'
+	    exclude '**/*.html'
 	    exclude '**/META-INF/services/**'
 	}
 	
@@ -122,5 +124,36 @@ project(':jsplike-ecj') {
 	dependencies {
 		compile rootProject
 		compile group: 'org.eclipse.jdt.core.compiler', name: 'ecj', version:'4.5.1'
+	}
+}
+
+project(':jsplike-javac') {
+	description = """Compile with Javac command"""
+
+	dependencies {
+		compile rootProject
+	}
+}
+
+project(':war-optimizer') {
+	description = """Optimize a war or a jar"""
+
+	dependencies {
+		compile rootProject
+		compile group: 'org.jsoup', name: 'jsoup', version:'1.8.3'
+		compile group: 'com.google.javascript', name: 'closure-compiler', version:'v20150729'
+	}
+}
+
+project(':war-optimizer-gradle-plugin') {
+	apply plugin: 'groovy'
+
+	description = """Optimize a war or a jar"""
+
+	dependencies {
+		compile project(':war-optimizer')
+		compile project(':jsplike-javac')
+		compile gradleApi()
+    	compile localGroovy()
 	}
 }

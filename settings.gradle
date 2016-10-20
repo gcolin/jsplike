@@ -1,2 +1,2 @@
 rootProject.name = 'jsplike'
-include 'jsplike-ecj'
+include 'jsplike-ecj','jsplike-javac','war-optimizer','war-optimizer-gradle-plugin'

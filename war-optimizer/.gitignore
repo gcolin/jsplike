@@ -17,3 +17,5 @@ target/
 # Gradle
 .gradle
 /build/
+/.nb-gradle/
+/war-optimizer-gradle-plugin/build/

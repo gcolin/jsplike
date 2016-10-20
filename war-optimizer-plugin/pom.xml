@@ -2,7 +2,7 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>net.gcolin</groupId>
-	<artifactId>war-optimizer</artifactId>
+	<artifactId>war-optimizer-plugin</artifactId>
 	<packaging>maven-plugin</packaging>
 	<version>0.1</version>
 	<name>${project.artifactId}</name>
@@ -30,33 +30,28 @@
 	<dependencies>
 		<dependency>
 			<groupId>net.gcolin</groupId>
-			<artifactId>jsplike</artifactId>
+			<artifactId>war-optimizer</artifactId>
 			<version>1.0</version>
 		</dependency>
 		<dependency>
-			<groupId>org.jsoup</groupId>
-			<artifactId>jsoup</artifactId>
-			<version>1.8.3</version>
-		</dependency>
-		<dependency>
-			<groupId>com.google.javascript</groupId>
-			<artifactId>closure-compiler</artifactId>
-			<version>v20150729</version>
+			<groupId>net.gcolin</groupId>
+			<artifactId>jsplike-javac</artifactId>
+			<version>1.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.maven</groupId>
 			<artifactId>maven-plugin-api</artifactId>
-			<version>3.0.3</version>
+			<version>3.3.9</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.maven</groupId>
 			<artifactId>maven-artifact</artifactId>
-			<version>3.0.3</version>
+			<version>3.3.9</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.maven.plugin-tools</groupId>
 			<artifactId>maven-plugin-tools-api</artifactId>
-			<version>3.1</version>
+			<version>3.5</version>
 			<exclusions>
 				<exclusion>
 					<groupId>junit</groupId>

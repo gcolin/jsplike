@@ -18,8 +18,7 @@ package net.gcolin.optimizer;
 import net.gcolin.common.io.Io;
 import net.gcolin.common.reflect.Scan;
 
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.logging.Log;
+import org.slf4j.Logger;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -66,9 +65,9 @@ public class WebAnnotation implements Consumer<Class<?>> {
   private List<Class<?>> filters = new ArrayList<Class<?>>();
   private List<Class<?>> listeners = new ArrayList<Class<?>>();
 
-  private Log log;
+  private Logger log;
 
-  public Log getLog() {
+  public Logger getLog() {
     return log;
   }
 
@@ -78,40 +77,34 @@ public class WebAnnotation implements Consumer<Class<?>> {
    * @param war war
    * @param explodedLibs explodedLibs
    * @param log log
-   * @throws MojoExecutionException if an error occurs.
+   * @throws IOException if an error occurs.
    */
-  public void execute(File war, Map<String, File> explodedLibs, Log log)
-      throws MojoExecutionException {
+  public void execute(File war, Map<String, File> explodedLibs, Logger log) throws IOException {
     this.log = log;
-    try {
-      URL[] cpUrl = new URL[explodedLibs.size() + 1];
-      cpUrl[0] = new File(war, WEB_INF_CLASSES).toURI().toURL();
-      Iterator<File> it = explodedLibs.values().iterator();
-      for (int i = 1; i < cpUrl.length; i++) {
-        cpUrl[i] = it.next().toURI().toURL();
+    URL[] cpUrl = new URL[explodedLibs.size() + 1];
+    cpUrl[0] = new File(war, WEB_INF_CLASSES).toURI().toURL();
+    Iterator<File> it = explodedLibs.values().iterator();
+    for (int i = 1; i < cpUrl.length; i++) {
+      cpUrl[i] = it.next().toURI().toURL();
+    }
+
+    URLClassLoader webAppClassLoader =
+        AccessController.doPrivileged(new PrivilegedAction<URLClassLoader>() {
+          public URLClassLoader run() {
+            return new URLClassLoader(cpUrl, WebAnnotation.class.getClassLoader());
+          }
+        });
+
+    Scan.classes(new File(war, WEB_INF_CLASSES).toURI().toURL(), this, webAppClassLoader);
+    writeIfNeeded(new File(war, "WEB-INF/web.xml"));
+
+    for (int i = 1; i < cpUrl.length; i++) {
+      URL url = cpUrl[i];
+      File web = new File(url.getFile(), "META-INF/web-fragment.xml");
+      if (web.exists()) {
+        Scan.classes(url, this, webAppClassLoader);
+        writeIfNeeded(web);
       }
-
-      URLClassLoader webAppClassLoader =
-          AccessController.doPrivileged(new PrivilegedAction<URLClassLoader>() {
-            public URLClassLoader run() {
-              return new URLClassLoader(cpUrl, WebAnnotation.class.getClassLoader());
-            }
-          });
-
-      Scan.classes(new File(war, WEB_INF_CLASSES).toURI().toURL(), this, webAppClassLoader);
-      writeIfNeeded(new File(war, "WEB-INF/web.xml"));
-
-      for (int i = 1; i < cpUrl.length; i++) {
-        URL url = cpUrl[i];
-        File web = new File(url.getFile(), "META-INF/web-fragment.xml");
-        if (web.exists()) {
-          Scan.classes(url, this, webAppClassLoader);
-          writeIfNeeded(web);
-        }
-      }
-
-    } catch (IOException ex) {
-      throw new MojoExecutionException(ex.getMessage(), ex);
     }
   }
 

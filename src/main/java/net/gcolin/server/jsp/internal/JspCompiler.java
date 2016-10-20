@@ -69,14 +69,30 @@ public class JspCompiler {
    * @param writeClasses write class file
    */
   public JspCompiler(ClassLoader cl, boolean alwaysWrite, boolean writeClasses) {
+    this(cl, alwaysWrite, writeClasses, null);
+  }
+
+  /**
+   * Create a JspCompiler.
+   * 
+   * @param cl classLoader
+   * @param alwaysWrite always write source file
+   * @param writeClasses write class file
+   * @param comp compiler
+   */
+  public JspCompiler(ClassLoader cl, boolean alwaysWrite, boolean writeClasses, Compiler comp) {
     this.alwaysWrite = alwaysWrite;
     this.writeClasses = writeClasses;
-    ServiceLoader<Compiler> sl = ServiceLoader.load(Compiler.class);
-    Iterator<Compiler> it = sl.iterator();
-    if (it.hasNext()) {
-      compiler = it.next();
+    if (comp == null) {
+      ServiceLoader<Compiler> sl = ServiceLoader.load(Compiler.class);
+      Iterator<Compiler> it = sl.iterator();
+      if (it.hasNext()) {
+        compiler = it.next();
+      } else {
+        compiler = new JdkCompiler();
+      }
     } else {
-      compiler = new JdkCompiler();
+      this.compiler = comp;
     }
     scan(cl);
   }
