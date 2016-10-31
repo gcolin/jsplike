@@ -151,7 +151,7 @@ public class JspTaglibTagBuider implements TagBuilder {
   private void loadDtl(BuildContext context, String uri, String prefix, String auri, URL dtl) {
     Logs.LOG.debug(auri);
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-    dbf.setNamespaceAware(true);
+    dbf.setNamespaceAware(false);
     dbf.setValidating(false);
     DocumentBuilder db;
     Document doc;

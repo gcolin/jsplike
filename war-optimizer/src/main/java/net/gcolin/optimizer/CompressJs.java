@@ -41,8 +41,10 @@ import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Find javascript files in html or jsp, assemble them, compress them with Closure.
@@ -69,6 +71,7 @@ public class CompressJs {
   private List<File> resources;
   private File errorDirectory;
   private Logger log;
+  private Map<String, File> generatedFiles = new HashMap<>();
 
   /**
    * Execute the compress js on a war.
@@ -131,14 +134,14 @@ public class CompressJs {
     StringBuilder str = new StringBuilder();
     for (ScriptPart part : data.getScriptParts()) {
       str.setLength(0);
-      getLog().info("getScripts");
+      getLog().info("getFiles");
       for (String p : part.getScripts()) {
         boolean found = false;
         for (File root : resources) {
           File file = p.startsWith("..") ? new File(data.getFile().toFile().getParentFile(), p)
               : new File(root, p);
           if (file.exists()) {
-            str.append(readFile(file.toPath()));
+            part.getScriptFiles().add(file);
             found = true;
             break;
           }
@@ -146,6 +149,18 @@ public class CompressJs {
         if (!found) {
           throw new IOException("cannot find script " + p);
         }
+      }
+
+      part.setScriptFile(generatedFiles.get(key(part)));
+
+      if (part.getScriptFile() != null) {
+        continue;
+      }
+
+      getLog().info("getScripts");
+
+      for (File file : part.getScriptFiles()) {
+        str.append(readFile(file.toPath()));
       }
 
       getLog().info("start compile with closure");
@@ -181,45 +196,51 @@ public class CompressJs {
       }
     }
 
-    String scriptPath = data.getFile().toAbsolutePath().toString()
-        .substring(data.getWar().toAbsolutePath().toString().length());
-    String base = data.getFile().toString().replace(File.separatorChar, '/');
-    int webapp = base.indexOf("webapp");
-    if (webapp == -1) {
-      base = "";
-    } else {
-      base = base.substring(webapp + 6, base.length() - scriptPath.length());
-    }
-    int ext = scriptPath.lastIndexOf('.');
-    if (ext != -1) {
-      scriptPath = scriptPath.substring(0, ext);
-    }
+    
 
     StringBuilder newFileContent = new StringBuilder();
     int prec = 0;
     for (int i = 0; i < data.getScriptParts().size(); i++) {
       ScriptPart part = data.getScriptParts().get(i);
-      String scriptFile = scriptPath + (i > 0 ? i : "") + ".js";
-      File script = new File(data.getWar().toFile(), scriptFile);
-      if (script.getAbsolutePath().contains("WEB-INF")) {
-        File wfile = data.getWar().toFile();
-        String baseName = scriptPath.substring(scriptPath.lastIndexOf(File.separatorChar) + 1);
-        int nb = 0;
-        while ((script = new File(wfile, baseName + nb + ".js")).exists()) {
-          nb++;
+      File script = part.getScriptFile();
+      String scriptFile = null;
+
+      if (script == null) {
+        String scriptPath = data.getFile().toAbsolutePath().toString()
+            .substring(data.getWar().toAbsolutePath().toString().length());
+        int ext = scriptPath.lastIndexOf('.');
+        if (ext != -1) {
+          scriptPath = scriptPath.substring(0, ext);
         }
-        scriptFile = "/" + script.getName();
+        scriptFile = scriptPath + (i > 0 ? i : "") + ".js";
+        script = new File(data.getWar().toFile(), scriptFile);
+        if (script.getAbsolutePath().contains("WEB-INF")) {
+          File wfile = data.getWar().toFile();
+          String baseName = scriptPath.substring(scriptPath.lastIndexOf(File.separatorChar) + 1);
+          int nb = 0;
+          while ((script = new File(wfile, baseName + nb + ".js")).exists()) {
+            nb++;
+          }
+          scriptFile = "/" + script.getName();
+        }
+        getLog().info("write to " + script.getAbsolutePath());
+        Files.write(script.toPath(), part.getCompiled().getBytes(StandardCharsets.UTF_8),
+            StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        String key = key(part);
+        generatedFiles.put(key, script.getAbsoluteFile());
+        getLog().info("create key {}", key);
+      } else {
+        getLog().info("reuse compressed file {}", script);
+        scriptFile = script.toPath().toAbsolutePath().toString()
+            .substring(data.getWar().toAbsolutePath().toString().length());
       }
-      getLog().info("write to " + script.getAbsolutePath());
-      Files.write(script.toPath(), part.getCompiled().getBytes(StandardCharsets.UTF_8),
-          StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
       for (int j = 0; j < part.getScriptPositions().size(); j++) {
         int[] pa = part.getScriptPositions().get(j);
         newFileContent.append(data.getContent().substring(prec, pa[0]));
         if (j == 0) {
           newFileContent.append("<script type=\"text/javascript\" charset=\"utf-8\" src=\"")
-              .append(base).append(scriptFile.replace(File.separatorChar, '/'))
+              .append(scriptFile.replace(File.separatorChar, '/'))
               .append("\"></script>");
         }
         prec = pa[1];
@@ -230,6 +251,11 @@ public class CompressJs {
     getLog().info("write to " + data.getFile().toFile().getAbsolutePath());
     Files.write(data.getFile(), newFileContent.toString().getBytes(StandardCharsets.UTF_8),
         StandardOpenOption.TRUNCATE_EXISTING);
+  }
+
+  private String key(ScriptPart part) {
+    return part.getScriptFiles().stream().map(File::getAbsolutePath).sorted()
+        .collect(Collectors.joining(";"));
   }
 
   public String readFile(Path file) throws IOException {

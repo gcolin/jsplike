@@ -15,6 +15,7 @@
 
 package net.gcolin.optimizer;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,10 +27,16 @@ import java.util.List;
  */
 public class ScriptPart {
 
+  private final List<File> scriptFiles = new ArrayList<>();
   private final List<String> scripts = new ArrayList<>();
   private final List<int[]> scriptPositions = new ArrayList<>();
   private String compiled;
+  private File scriptFile;
 
+  public List<File> getScriptFiles() {
+    return scriptFiles;
+  }
+  
   public List<String> getScripts() {
     return scripts;
   }
@@ -44,5 +51,13 @@ public class ScriptPart {
 
   public void setCompiled(String compiled) {
     this.compiled = compiled;
+  }
+
+  public File getScriptFile() {
+    return scriptFile;
+  }
+
+  public void setScriptFile(File scriptFile) {
+    this.scriptFile = scriptFile;
   }
 }

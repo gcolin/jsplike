@@ -29,21 +29,27 @@ import org.gradle.api.tasks.bundling.Jar
  * @since 1.0
  */
 class OptimizeTask extends DefaultTask {
-    
-    @TaskAction
-    def optimize() {
-        Jar jar = project.tasks.getByName('jar');
-        def archive = jar.archivePath;
-        def exploded = new File(project.buildDir, "opexploded");
-        Io.unzip(archive, exploded)
-        def libs = archive.parentFile
-        def archiveName = archive.name
-        def prefix = archiveName.substring(0, archiveName.lastIndexOf('.'));
-        def extension = archiveName.substring(archiveName.lastIndexOf('.'));
-        def wp = new WarProd()
-        URL[] urls = [archive.toURI().toURL()]
-        wp.classLoader = new URLClassLoader(urls, ClassLoader.getSystemClassLoader())
-        wp.execute(exploded, project.buildDir, new File(libs, prefix + "-optimized" + extension), 
-        	new File(libs, prefix + "-resources.zip"))
+
+  String classifier = null
+
+  @TaskAction
+  def optimize() {
+    Jar jar = project.tasks.getByName('jar');
+    def archive = jar.archivePath;
+    def libs = archive.parentFile
+    def archiveName = archive.name
+    def prefix = archiveName.substring(0, archiveName.lastIndexOf('.'));
+    def extension = archiveName.substring(archiveName.lastIndexOf('.'));
+    def exploded = new File(project.buildDir, "opexploded");
+    Io.deleteDir(exploded.toPath())
+    if(classifier != null) {
+      archive = new File(libs, prefix + '-' + classifier + extension)
     }
+    Io.unzip(archive, exploded)
+    def wp = new WarProd()
+    URL[] urls = [exploded.toURI().toURL()]
+    wp.classLoader = new URLClassLoader(urls, ClassLoader.getSystemClassLoader())
+    wp.execute(exploded, project.buildDir, new File(libs, prefix + "-optimized" + extension),
+        new File(libs, prefix + "-resources.zip"))
+  }
 }

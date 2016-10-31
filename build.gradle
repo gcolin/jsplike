@@ -17,7 +17,7 @@ description = """Enhanced JSP that compile EL expressions"""
 allprojects {
 	
 	apply plugin: 'java'
-    apply plugin: 'maven'
+        apply plugin: 'maven'
 	apply plugin: 'idea'
 	apply plugin: 'eclipse'
 	apply plugin: 'findbugs'
@@ -34,6 +34,7 @@ allprojects {
 	    exclude '**/*.jsp'
 	    exclude '**/*.js'
 	    exclude '**/*.html'
+        exclude '**/*.tld'
 	    exclude '**/META-INF/services/**'
 	}
 	

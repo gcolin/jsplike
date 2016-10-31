@@ -20,12 +20,16 @@ import net.gcolin.common.io.Io;
 import net.gcolin.common.io.StringWriter;
 import net.gcolin.common.lang.Pair;
 import net.gcolin.common.reflect.Scan;
+import net.gcolin.common.reflect.ScanException;
 import net.gcolin.server.jsp.Compiler;
 import net.gcolin.server.jsp.JspRuntimeException;
 import net.gcolin.server.jsp.Logs;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+import org.xml.sax.EntityResolver;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -34,6 +38,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
+import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URL;
@@ -48,6 +53,7 @@ import java.util.ServiceLoader;
 
 import javax.servlet.ServletContext;
 import javax.tools.JavaFileObject.Kind;
+import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
@@ -110,57 +116,73 @@ public class JspCompiler {
   }
 
   private void scan0(URL clUrl) {
-    Scan.resources(clUrl, (path, us) -> {
-      if (path.endsWith(".tld")) {
-        ByteArrayOutputStream bout = new ByteArrayOutputStream();
-        try {
-          URL url = us.get();
-          try (InputStream in = url.openStream()) {
-            Io.copy(in, bout);
-          }
+    try {
+      Scan.resources(clUrl, (path, us) -> {
+        if (path.endsWith(".tld")) {
+          ByteArrayOutputStream bout = new ByteArrayOutputStream();
+          try {
+            URL url = us.get();
+            try (InputStream in = url.openStream()) {
+              Io.copy(in, bout);
+            }
 
-          DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-          dbf.setNamespaceAware(true);
-          dbf.setValidating(false);
-          Document doc;
-          byte[] data = bout.toByteArray();
-          try (InputStream in = new ByteArrayInputStream(data)) {
-            doc = dbf.newDocumentBuilder().parse(in);
-          }
-          XPathFactory xpathfactory = XPathFactory.newInstance();
-          XPath xpath = xpathfactory.newXPath();
-          XPathExpression expr =
-              xpath.compile("/*[local-name()='taglib']/*[local-name()='uri']/text()");
-          Node node = (Node) expr.evaluate(doc, XPathConstants.NODE);
-          if (node != null) {
-            String uri = node.getNodeValue().trim();
-            Logs.LOG.info("add taglib {} from {}", uri, path);
-            scannedTaglib.put(uri, new URL("tld", "", -1, url.getPath(), new URLStreamHandler() {
-
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            dbf.setNamespaceAware(false);
+            dbf.setValidating(false);
+            dbf.setXIncludeAware(false);
+            dbf.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+            
+            Document doc;
+            byte[] data = bout.toByteArray();
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            db.setEntityResolver(new EntityResolver() {
               @Override
-              protected URLConnection openConnection(URL url) throws IOException {
-                return new URLConnection(url) {
-
-                  private InputStream in = new ByteArrayInputStream(data);
-
-                  @Override
-                  public void connect() throws IOException {}
-
-                  @Override
-                  public InputStream getInputStream() throws IOException {
-                    return in;
-                  }
-                };
+              public InputSource resolveEntity(String arg0, String arg1)
+                    throws SAXException, IOException {
+                return new InputSource(new StringReader(""));
               }
-            }));
+            });
+            
+            try (InputStream in = new ByteArrayInputStream(data)) {
+              doc = db.parse(in);
+            }
+            XPathFactory xpathfactory = XPathFactory.newInstance();
+            XPath xpath = xpathfactory.newXPath();
+            XPathExpression expr =
+                xpath.compile("/*[local-name()='taglib']/*[local-name()='uri']/text()");
+            Node node = (Node) expr.evaluate(doc, XPathConstants.NODE);
+            if (node != null) {
+              String uri = node.getNodeValue().trim();
+              Logs.LOG.info("add taglib {} from {}", uri, path);
+              scannedTaglib.put(uri, new URL("tld", "", -1, url.getPath(), new URLStreamHandler() {
+
+                @Override
+                protected URLConnection openConnection(URL url) throws IOException {
+                  return new URLConnection(url) {
+
+                    private InputStream in = new ByteArrayInputStream(data);
+
+                    @Override
+                    public void connect() throws IOException {}
+
+                    @Override
+                    public InputStream getInputStream() throws IOException {
+                      return in;
+                    }
+                  };
+                }
+              }));
+            }
+          } catch (Exception ex) {
+            throw new JspRuntimeException(ex);
+          } finally {
+            bout.release();
           }
-        } catch (Exception ex) {
-          throw new JspRuntimeException(ex);
-        } finally {
-          bout.release();
         }
-      }
-    });
+      });
+    } catch (ScanException ex) {
+      Logs.LOG.warn("error while scanning " + clUrl, ex);
+    }
   }
 
   /**

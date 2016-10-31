@@ -36,6 +36,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
@@ -145,6 +146,7 @@ public class WarProd {
     private final String warPath;
     private byte[] buffer;
     private Predicate<String> resource;
+    private Function<String, String> resFormat;
 
     public AssembleFileVisitor(Map<String, File> libMap, File tmp, ZipOutputStream zwar,
         ZipOutputStream zres, String warPath, byte[] buffer, boolean war) {
@@ -156,6 +158,8 @@ public class WarProd {
       this.buffer = buffer;
       this.resource =
           war ? path -> !path.contains(WEB_INF) : path -> path.contains(META_INF_RESOURCES);
+      this.resFormat =
+          war ? Function.identity() : path -> path.substring(META_INF_RESOURCES.length() + 1);
     }
 
     @Override
@@ -185,7 +189,7 @@ public class WarProd {
         Io.close(in);
       }
       if (resource.test(path)) {
-        addToZipFile(fl, zipEntryName, zres, true);
+        addToZipFile(fl, resFormat.apply(zipEntryName), zres, true);
       }
 
       return FileVisitResult.CONTINUE;
