@@ -171,7 +171,7 @@ public class WarProd {
       }
       String path = fl.getAbsolutePath();
       InputStream in = null;
-      String zipEntryName = path.substring(warPath.length());
+      String zipEntryName = path.substring(warPath.length()).replace('\\', '/');
       try {
         if (fileName.endsWith(".jar") && "lib".equals(fl.getParentFile().getName())) {
           try (FileOutputStream fout = new FileOutputStream(tmp)) {
@@ -188,7 +188,7 @@ public class WarProd {
       } finally {
         Io.close(in);
       }
-      if (resource.test(path)) {
+      if (resource.test(zipEntryName)) {
         addToZipFile(fl, resFormat.apply(zipEntryName), zres, true);
       }
 
@@ -235,9 +235,10 @@ public class WarProd {
         throws IOException {
 
       FileInputStream fis = null;
+      String parsedName = zipName.replace('\\', '/');
       try {
         fis = new FileInputStream(file);
-        ZipEntry zipEntry = new ZipEntry(zipName);
+        ZipEntry zipEntry = new ZipEntry(parsedName);
         zos.putNextEntry(zipEntry);
         Io.copy(fis, zos, buffer);
         zos.closeEntry();
@@ -249,7 +250,7 @@ public class WarProd {
         fis = null;
         try {
           fis = new FileInputStream(file);
-          ZipEntry zipEntry = new ZipEntry(zipName + ".gz");
+          ZipEntry zipEntry = new ZipEntry(parsedName + ".gz");
           zos.putNextEntry(zipEntry);
           GZIPOutputStream gout = new GZIPOutputStream(zos);
           Io.copy(fis, gout, buffer);

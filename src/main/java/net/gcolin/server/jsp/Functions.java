@@ -164,13 +164,13 @@ public class Functions {
   /**
    * Returns a subset of a string according to the semantics of <code>String#substring()</code>.
    * 
-   * <p>Additional semantics as follows:
+   * <p>Additional semantics as follows:</p>
    * <ul>
    * <li>if <code>beginIndex &lt; 0</code> its value is adjusted to 0</li>
    * <li>if <code>endIndex &lt; 0 or greater than the string length</code>, its value is adjusted to
    * the length of the string</li>
    * <li>if <code>endIndex &lt; beginIndex</code>, an empty string is returned</li>
-   * </ul></p>
+   * </ul>
    *
    * @param input the input string on which the substring function is applied
    * @param beginIndex the beginning index (0-based), inclusive

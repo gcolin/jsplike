@@ -160,6 +160,7 @@ public class CompressJs {
       getLog().info("getScripts");
 
       for (File file : part.getScriptFiles()) {
+        str.append("\n");
         str.append(readFile(file.toPath()));
       }
 
@@ -203,7 +204,7 @@ public class CompressJs {
     for (int i = 0; i < data.getScriptParts().size(); i++) {
       ScriptPart part = data.getScriptParts().get(i);
       File script = part.getScriptFile();
-      String scriptFile = null;
+      String scriptFile;
 
       if (script == null) {
         String scriptPath = data.getFile().toAbsolutePath().toString()
