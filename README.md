@@ -154,11 +154,13 @@ public class JspListener implements ServletContextListener {
 The jar contains a *web-fragment.xml*, so maybe there are nothing to do.
 
 If it does not work, you can copy the Servlet declaration of the *web-fragment.xml* located in *META-INF*.
+
+The library generate only generate the java code in *work/appX* when the compilation failed. For always generating the java source, add the *-DwriteJsp=true* in the environment variables. 
   
 ## How to install
 
 Download and install the dependency.
-```
+```bash
     git clone https://github.com/gcolin/common.git
     cd common
     gradle install
@@ -166,14 +168,14 @@ Download and install the dependency.
 
 Download and install the project.
 
-```
+```bash
     git clone https://github.com/gcolin/jsplike.git
     cd jsplike
     gradle install
 ```
 
 The maven dependency
-```
+```xml
 <dependency>
   <groupId>net.gcolin</groupId>
   <artifactId>jsplike</artifactId>
@@ -212,18 +214,18 @@ In a *pom.xml* with a packaging *war*, add
 ```
 ### Installation
 
-```
+```bash
 	maven clean install
 ```
 
 With maven site in *target/site*
-```
+```bash
 	maven clean install site
 ```
 
 ## Documentation
 
-```
+```bash
     gradle javadoc
 ```
 
@@ -233,7 +235,7 @@ see the report in **build/docs/javadocs**
 
 ### Open in Eclipse
 
-```
+```bash
     gradle eclipse
 ```
 
@@ -241,7 +243,7 @@ In Eclipse, import Existing Projects into Workspace.
 
 ### Display a test code coverage report
 
-```
+```bash
     gradle clean test jacocoTestReport
 ```
 
@@ -250,7 +252,7 @@ see the report in **build/reports/jacoco**
 
 ### Display findBugs report
 
-```
+```bash
     gradle findBugsMain
 ```
 
@@ -258,7 +260,7 @@ see the report in **build/reports/findbugs**
 
 ### Display pmd report
 
-```
+```bash
     gradle pmdMain
 ```
 
@@ -266,7 +268,7 @@ see the report in **build/reports/pmd**
 
 ### Display licenses of dependencies
 
-```
+```bash
     gradle downloadLicenses
 ```
 
@@ -275,7 +277,7 @@ see the report in **build/reports/license**
 
 ### Display the Apache RAT report
 
-```
+```bash
     gradle rat
 ```
 

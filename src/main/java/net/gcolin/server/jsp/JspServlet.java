@@ -44,7 +44,8 @@ public class JspServlet implements Servlet {
   @Override
   public void init(ServletConfig config) throws ServletException {
     this.config = config;
-    compiler = new JspCompiler(config.getServletContext().getClassLoader(), false, false);
+    boolean alwayswrite = Boolean.parseBoolean(config.getInitParameter("alwayswrite")) || Boolean.parseBoolean(System.getProperty("writeJsp"));
+    compiler = new JspCompiler(config.getServletContext().getClassLoader(), alwayswrite, false);
   }
 
   @Override
