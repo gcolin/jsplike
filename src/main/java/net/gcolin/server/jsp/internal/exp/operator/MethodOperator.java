@@ -46,9 +46,6 @@ public class MethodOperator extends Operator {
   public MethodOperator(String name, BuildContext context) {
     super();
     this.name = name.startsWith(".") ? name.substring(1) : name;
-    if (this.name.isEmpty()) {
-      System.out.println();
-    }
     if (context.getTaglib().getResource(name) != null) {
       nbVar = 0;
       method = ((FunctionTagBuilder) context.getTaglib().getResource(name)).getMethod();

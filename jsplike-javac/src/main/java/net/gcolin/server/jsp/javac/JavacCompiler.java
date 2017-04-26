@@ -15,11 +15,6 @@
 
 package net.gcolin.server.jsp.javac;
 
-import net.gcolin.common.Logs;
-import net.gcolin.common.io.Io;
-import net.gcolin.server.jsp.Compiler;
-import net.gcolin.server.jsp.JspRuntimeException;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -30,10 +25,12 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
+
+import net.gcolin.common.Logs;
+import net.gcolin.common.io.Io;
+import net.gcolin.server.jsp.JspRuntimeException;
+import net.gcolin.server.jsp.internal.AbstractCompiler;
 
 /**
  * Create a compiler that executes javac in a command.
@@ -41,7 +38,7 @@ import java.util.stream.Collectors;
  * @author Gaël COLIN
  * @since 1.0
  */
-public class JavacCompiler implements Compiler {
+public class JavacCompiler extends AbstractCompiler {
 
   @Override
   public ClassLoader compile(String[] targetClassName, String[] source, ClassLoader cl, File work,
@@ -111,17 +108,6 @@ public class JavacCompiler implements Compiler {
       command.append(newJava.getName()).append(' ');
     }
     return command.toString();
-  }
-
-  private Set<String> getClasspath(ClassLoader classLoader) {
-    Set<String> urls = new HashSet<>();
-
-    while (classLoader != null) {
-      URLClassLoader cl = (URLClassLoader) classLoader;
-      urls.addAll(Arrays.stream(cl.getURLs()).map(URL::getFile).collect(Collectors.toList()));
-      classLoader = classLoader.getParent();
-    }
-    return urls;
   }
 
 }

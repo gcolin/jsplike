@@ -15,16 +15,12 @@
 
 package net.gcolin.optimizer;
 
-import net.gcolin.common.io.Io;
-import net.gcolin.common.reflect.Scan;
-
-import org.slf4j.Logger;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.lang.annotation.Annotation;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.AccessController;
@@ -38,9 +34,14 @@ import java.util.function.Consumer;
 import javax.servlet.DispatcherType;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebFilter;
-import javax.servlet.annotation.WebInitParam;
 import javax.servlet.annotation.WebListener;
 import javax.servlet.annotation.WebServlet;
+
+import org.slf4j.Logger;
+
+import net.gcolin.common.io.Io;
+import net.gcolin.common.reflect.Reflect;
+import net.gcolin.common.reflect.Scan;
 
 /**
  * This goal will look for webservlet, webfilter and weblistener and add them to webapp.
@@ -64,6 +65,9 @@ public class WebAnnotation implements Consumer<Class<?>> {
   private List<Class<?>> servlets = new ArrayList<Class<?>>();
   private List<Class<?>> filters = new ArrayList<Class<?>>();
   private List<Class<?>> listeners = new ArrayList<Class<?>>();
+  private Class<? extends Annotation> webservlet;
+  private Class<? extends Annotation> webfilter;
+  private Class<? extends Annotation> weblistener;
 
   private Logger log;
 
@@ -77,9 +81,11 @@ public class WebAnnotation implements Consumer<Class<?>> {
    * @param war war
    * @param explodedLibs explodedLibs
    * @param log log
+   * @param classLoader 
    * @throws IOException if an error occurs.
    */
-  public void execute(File war, Map<String, File> explodedLibs, Logger log) throws IOException {
+  @SuppressWarnings("unchecked")
+  public void execute(File war, Map<String, File> explodedLibs, Logger log, ClassLoader classLoader) throws IOException {
     this.log = log;
     URL[] cpUrl = new URL[explodedLibs.size() + 1];
     cpUrl[0] = new File(war, WEB_INF_CLASSES).toURI().toURL();
@@ -87,13 +93,21 @@ public class WebAnnotation implements Consumer<Class<?>> {
     for (int i = 1; i < cpUrl.length; i++) {
       cpUrl[i] = it.next().toURI().toURL();
     }
-
-    URLClassLoader webAppClassLoader =
-        AccessController.doPrivileged(new PrivilegedAction<URLClassLoader>() {
-          public URLClassLoader run() {
+    
+    ClassLoader webAppClassLoader = classLoader != null ? classLoader : 
+        AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+          public ClassLoader run() {
             return new URLClassLoader(cpUrl, WebAnnotation.class.getClassLoader());
           }
         });
+    
+    try {
+      webservlet = (Class<? extends Annotation>) webAppClassLoader.loadClass(WebServlet.class.getName());
+      webfilter = (Class<? extends Annotation>) webAppClassLoader.loadClass(WebFilter.class.getName());
+      weblistener = (Class<? extends Annotation>) webAppClassLoader.loadClass(WebListener.class.getName());
+    } catch (ClassNotFoundException ex) {
+      throw new IOException(ex);
+    }   
 
     Scan.classes(new File(war, WEB_INF_CLASSES).toURI().toURL(), this, webAppClassLoader);
     writeIfNeeded(new File(war, "WEB-INF/web.xml"));
@@ -135,8 +149,8 @@ public class WebAnnotation implements Consumer<Class<?>> {
         fragment.newLine();
       }
       for (Class<?> c : filters) {
-        WebFilter ws = c.getAnnotation(WebFilter.class);
-        String name = ws.filterName();
+        Annotation ws = c.getAnnotation(webfilter);
+        String name = (String) Reflect.execute(ws, "filterName");
         if (name.length() == 0) {
           name = c.getSimpleName().substring(0, 1).toLowerCase() + c.getSimpleName().substring(1);
         }
@@ -150,18 +164,18 @@ public class WebAnnotation implements Consumer<Class<?>> {
         fragment.write(c.getName());
         fragment.write("</filter-class>");
         fragment.newLine();
-        if (ws.asyncSupported()) {
+        if ((Boolean) Reflect.execute(ws, "asyncSupported")) {
           fragment.write(ASYNC_SUPPORTED);
           fragment.newLine();
         }
         fragment.write("        </filter>");
         fragment.newLine();
-        List<DispatcherType> dt = new ArrayList<>(ws.dispatcherTypes().length);
-        for (DispatcherType dispatcherType : ws.dispatcherTypes()) {
-          dt.add(dispatcherType);
+        List<DispatcherType> dt = new ArrayList<>();
+        for (Object dispatcherType : (Object[]) Reflect.execute(ws, "dispatcherTypes")) {
+          dt.add(DispatcherType.valueOf((String) Reflect.execute(dispatcherType, "name")));
         }
-        addFilterUrlPattern(fragment, ws.value(), name, dt);
-        addFilterUrlPattern(fragment, ws.urlPatterns(), name, dt);
+        addFilterUrlPattern(fragment, (String[]) Reflect.execute(ws, "value"), name, dt);
+        addFilterUrlPattern(fragment, (String[]) Reflect.execute(ws, "urlPatterns"), name, dt);
       }
       for (Class<?> c : servlets) {
         writeServlet(fragment, c);
@@ -172,8 +186,8 @@ public class WebAnnotation implements Consumer<Class<?>> {
   }
 
   private void writeServlet(BufferedWriter fragment, Class<?> servlet) throws IOException {
-    WebServlet ws = servlet.getAnnotation(WebServlet.class);
-    String name = ws.name();
+    Object ws = servlet.getAnnotation(webservlet);
+    String name = (String) Reflect.execute(ws, "name");
     if (name.length() == 0) {
       name = servlet.getName();
     }
@@ -187,62 +201,68 @@ public class WebAnnotation implements Consumer<Class<?>> {
     fragment.write(servlet.getName());
     fragment.write("</servlet-class>");
     fragment.newLine();
-    if (!ws.description().isEmpty()) {
+    String description = (String) Reflect.execute(ws, "description");
+    if (!description.isEmpty()) {
       fragment.write("                <description>");
-      fragment.write(ws.description());
+      fragment.write(description);
       fragment.write("</description>");
       fragment.newLine();
     }
-    if (!ws.displayName().isEmpty()) {
+    String displayName = (String) Reflect.execute(ws, "displayName");
+    if (!displayName.isEmpty()) {
       fragment.write("                <display-name>");
-      fragment.write(ws.displayName());
+      fragment.write(displayName);
       fragment.write("</display-name>");
       fragment.newLine();
     }
-    if (!ws.largeIcon().isEmpty() || !ws.smallIcon().isEmpty()) {
+    String largeIcon = (String) Reflect.execute(ws, "largeIcon");
+    String smallIcon = (String) Reflect.execute(ws, "smallIcon");
+    if (!largeIcon.isEmpty() || !smallIcon.isEmpty()) {
       fragment.write("                <icon>");
-      if (!ws.largeIcon().isEmpty()) {
+      if (!largeIcon.isEmpty()) {
         fragment.write("                        <large-icon>");
-        fragment.write(ws.largeIcon());
+        fragment.write(largeIcon);
         fragment.write("</large-icon>");
         fragment.newLine();
       }
-      if (!ws.smallIcon().isEmpty()) {
+      if (!smallIcon.isEmpty()) {
         fragment.write("                        <small-icon>");
-        fragment.write(ws.smallIcon());
+        fragment.write(smallIcon);
         fragment.write("</small-icon>");
         fragment.newLine();
       }
       fragment.write("</icon>");
     }
-    for (WebInitParam param : ws.initParams()) {
+    for (Object param : (Object[]) Reflect.execute(ws, "initParams")) {
       fragment.write("                <init-param>");
       fragment.newLine();
       fragment.write("                        <param-name>");
-      fragment.write(param.name());
+      fragment.write((String) Reflect.execute(param, "param"));
       fragment.write("</param-name>");
       fragment.newLine();
-      if (!param.description().isEmpty()) {
+      description = (String) Reflect.execute(param, "description");
+      if (!description.isEmpty()) {
         fragment.write("                        <description>");
-        fragment.write(param.description());
+        fragment.write(description);
         fragment.write("</description>");
         fragment.newLine();
       }
       fragment.write("                        <param-value>");
-      fragment.write(param.value());
+      fragment.write((String) Reflect.execute(param, "value"));
       fragment.write("</param-value>");
       fragment.newLine();
       fragment.write("                </init-param>");
       fragment.newLine();
     }
 
-    if (ws.asyncSupported()) {
+    if ((Boolean) Reflect.execute(ws, "asyncSupported")) {
       fragment.write(ASYNC_SUPPORTED);
       fragment.newLine();
     }
-    if (ws.loadOnStartup() > -1) {
+    int loadOnStartup = (Integer) Reflect.execute(ws, "loadOnStartup");
+    if (loadOnStartup > -1) {
       fragment.write("                <load-on-startup>");
-      fragment.write(ws.loadOnStartup());
+      fragment.write(loadOnStartup);
       fragment.write("</load-on-startup>");
       fragment.newLine();
     }
@@ -250,8 +270,8 @@ public class WebAnnotation implements Consumer<Class<?>> {
     writeServletMultipartConfig(fragment, servlet);
     fragment.write("        </servlet>");
     fragment.newLine();
-    addServletUrlPattern(fragment, ws.value(), name);
-    addServletUrlPattern(fragment, ws.urlPatterns(), name);
+    addServletUrlPattern(fragment, (String[]) Reflect.execute(ws, "value"), name);
+    addServletUrlPattern(fragment, (String[]) Reflect.execute(ws, "urlPatterns"), name);
   }
 
   private void writeServletMultipartConfig(BufferedWriter fragment, Class<?> servlet)
@@ -349,11 +369,13 @@ public class WebAnnotation implements Consumer<Class<?>> {
 
   @Override
   public void accept(Class<?> type) {
-    if (type.isAnnotationPresent(WebServlet.class)) {
+    log.warn("? " + type);
+    if (type.isAnnotationPresent(webservlet)) {
+      log.warn("detect servlet " + type);
       servlets.add(type);
-    } else if (type.isAnnotationPresent(WebFilter.class)) {
+    } else if (type.isAnnotationPresent(webfilter)) {
       filters.add(type);
-    } else if (type.isAnnotationPresent(WebListener.class)) {
+    } else if (type.isAnnotationPresent(weblistener)) {
       listeners.add(type);
     }
   }

@@ -57,6 +57,7 @@ public class WarProd {
   private static final Set<String> ACCEPTED_EXTENSIONS = Collections2.toSet("js", "css", "png",
       "jpg", "ico", "html", "jpeg", "gif", "eot", "svg", "ttf", "woff", "woff2");
   private Compiler compiler;
+  private Logger logger;
   private ClassLoader classLoader;
   private byte[] buffer;
 
@@ -72,7 +73,9 @@ public class WarProd {
   public void execute(File exploded, File target, File warFile, File resourceFile)
       throws IOException {
     buffer = Io.takeBytes();
-    Logger logger = LoggerFactory.getLogger(this.getClass());
+    if (logger == null) {
+      logger = LoggerFactory.getLogger(this.getClass());
+    }
     logger.info("explode libs");
     Map<String, File> libMap = new HashMap<>();
 
@@ -96,7 +99,7 @@ public class WarProd {
       new CompressJs().execute(exploded, libMap, logger);
 
       logger.info("pre read annontations");
-      new WebAnnotation().execute(exploded, libMap, logger);
+      new WebAnnotation().execute(exploded, libMap, logger, classLoader);
 
       logger.info("compile jsp");
       new JspCompile().execute(exploded, libMap, logger, compiler, classLoader);
@@ -175,7 +178,7 @@ public class WarProd {
       try {
         if (fileName.endsWith(".jar") && "lib".equals(fl.getParentFile().getName())) {
           try (FileOutputStream fout = new FileOutputStream(tmp)) {
-            zip(libMap.get(fl.getName()), fout, ACCEPT, zres, ACCEPT_RESOURCE);
+            zip(libMap.get(fl.getName()), fout, ACCEPT, zres, ACCEPT_RESOURCE, zwar);
           }
           in = new FileInputStream(tmp);
         } else {
@@ -196,7 +199,7 @@ public class WarProd {
     }
 
     private void zip(File file, OutputStream out, Predicate<String> accept, ZipOutputStream resZip,
-        Predicate<String> acceptResource) throws IOException {
+        Predicate<String> acceptResource, ZipOutputStream parentZip) throws IOException {
       ZipOutputStream output = null;
       String fs = file.getAbsolutePath();
       if (!fs.endsWith(File.separator)) {
@@ -217,11 +220,12 @@ public class WarProd {
             String path = fl.getAbsolutePath().replace('\\', '/');
             if (path.contains(META_INF_RESOURCES) && !path.contains("/WEB-INF/")
                 && acceptResource.test(fl.getName())) {
-              addToZipFile(fl, path.substring(fPath.length() + META_INF_RESOURCES.length() + 1),
-                  resZip, true);
+              String entryName = path.substring(fPath.length() + META_INF_RESOURCES.length() + 1);
+              addToZipFile(fl, entryName, resZip, true);
+              addToZipFile(fl, entryName, parentZip, true);
+            } else {
+              addToZipFile(fl, path.substring(fPath.length()), zos, false);
             }
-
-            addToZipFile(fl, path.substring(fPath.length()), zos, false);
             return FileVisitResult.CONTINUE;
           }
 
@@ -278,6 +282,14 @@ public class WarProd {
 
   public void setClassLoader(ClassLoader classLoader) {
     this.classLoader = classLoader;
+  }
+  
+  public void setLogger(Logger logger) {
+    this.logger = logger;
+  }
+  
+  public Logger getLogger() {
+    return logger;
   }
 
 }

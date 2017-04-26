@@ -19,8 +19,11 @@ import net.gcolin.optimizer.WarProd
 import net.gcolin.server.jsp.internal.JdkCompiler
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.bundling.Jar
+import org.gradle.api.tasks.bundling.War
+import org.slf4j.Logger
 
 /**
  * Gradle task.
@@ -31,11 +34,19 @@ import org.gradle.api.tasks.bundling.Jar
 class OptimizeTask extends DefaultTask {
 
   String classifier = null
+  
+  Configuration classpath = null
+  
+  Logger log = null;
 
   @TaskAction
   def optimize() {
-    Jar jar = project.tasks.getByName('jar');
-    def archive = jar.archivePath;
+    War war = project.tasks.getByName('war')
+    Jar jar = project.tasks.getByName('jar')
+    def archive = jar.archivePath
+    if(war != null && war.archivePath.exists()) {
+      archive = war.archivePath
+    }
     def libs = archive.parentFile
     def archiveName = archive.name
     def prefix = archiveName.substring(0, archiveName.lastIndexOf('.'));
@@ -47,8 +58,14 @@ class OptimizeTask extends DefaultTask {
     }
     Io.unzip(archive, exploded)
     def wp = new WarProd()
-    URL[] urls = [exploded.toURI().toURL()]
-    wp.classLoader = new URLClassLoader(urls, ClassLoader.getSystemClassLoader())
+    wp.logger = log
+    def urls = [exploded.toURI().toURL()]
+    if(classpath != null) {
+       for(String part: classpath.asPath.split(":")) {
+         urls.add(new File(part).toURI().toURL());
+       }
+    }
+    wp.classLoader = new URLClassLoader(urls as URL[], ClassLoader.getSystemClassLoader())
     wp.execute(exploded, project.buildDir, new File(libs, prefix + "-optimized" + extension),
         new File(libs, prefix + "-resources.zip"))
   }
