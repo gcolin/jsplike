@@ -37,6 +37,7 @@ public class BiOperatorJExpression implements JExpression {
    * @param a1 an expression
    * @param type type
    * @param compilePattern compilePattern
+   * @param context context
    */
   public BiOperatorJExpression(JExpression a2, JExpression a1, Class<?> type, String compilePattern,
       BuildContext context) {

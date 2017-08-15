@@ -15,8 +15,7 @@
 
 package net.gcolin.server.jsp;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.logging.Logger;
 
 /**
  * The logger of this project. Maybe a bad practice but it is fast and light.
@@ -26,7 +25,7 @@ import org.slf4j.LoggerFactory;
  */
 public class Logs {
 
-  public static final Logger LOG = LoggerFactory.getLogger("net.gcolin.server.jsp");
+  public static final Logger LOG = Logger.getLogger("net.gcolin.server.jsp");
 
   private Logs() {}
 }

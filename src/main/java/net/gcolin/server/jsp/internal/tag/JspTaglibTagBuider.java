@@ -36,6 +36,7 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.logging.Level;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -131,7 +132,7 @@ public class JspTaglibTagBuider implements TagBuilder {
           throw new RuntimeException(e1);
         }
         if (dtl == null) {
-          Logs.LOG.warn("cannot load taglib file {}", auri);
+          Logs.LOG.log(Level.WARNING, "cannot load taglib file {0}", auri);
         }
       } else {
         auri = uri;
@@ -140,16 +141,16 @@ public class JspTaglibTagBuider implements TagBuilder {
       if (dtl != null) {
         loadDtl(context, uri, prefix, auri, dtl);
       } else {
-        Logs.LOG.warn("cannot load taglib file {}", auri);
+        Logs.LOG.log(Level.WARNING, "cannot load taglib file {0}", auri);
       }
     } else {
-      Logs.LOG.debug(uri);
+      Logs.LOG.fine(uri);
       loader.accept(context.getTaglib(), prefix);
     }
   }
 
   private void loadDtl(BuildContext context, String uri, String prefix, String auri, URL dtl) {
-    Logs.LOG.debug(auri);
+    Logs.LOG.fine(auri);
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     dbf.setNamespaceAware(false);
     dbf.setValidating(false);
@@ -228,7 +229,7 @@ public class JspTaglibTagBuider implements TagBuilder {
         try {
           attribute.setType(cl.loadClass(aparameter.getTextContent()));
         } catch (ClassNotFoundException ex) {
-          Logs.LOG.warn("error while reading taglib file " + auri, ex);
+          Logs.LOG.log(Level.WARNING, "error while reading taglib file " + auri, ex);
         }
       }
     }

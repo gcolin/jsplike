@@ -23,7 +23,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.bundling.War
-import org.slf4j.Logger
+import java.util.logging.Logger
 
 /**
  * Gradle task.
@@ -41,6 +41,7 @@ class OptimizeTask extends DefaultTask {
 
   @TaskAction
   def optimize() {
+    log = Logger.getLogger('net.gcolin.optimizer.gradle')
     War war = project.tasks.getByName('war')
     Jar jar = project.tasks.getByName('jar')
     def archive = jar.archivePath

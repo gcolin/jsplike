@@ -58,7 +58,7 @@ public class JspFactoryFacade extends JspFactory implements JspApplicationContex
 
   @Override
   public void addELResolver(ELResolver resolver) {
-    Logs.LOG.debug("el resolved are ignored");
+    Logs.LOG.fine("el resolved are ignored");
   }
 
   @Override
@@ -68,7 +68,7 @@ public class JspFactoryFacade extends JspFactory implements JspApplicationContex
 
   @Override
   public void addELContextListener(ELContextListener listener) {
-    Logs.LOG.debug("el context listener are ignored");
+    Logs.LOG.fine("el context listener are ignored");
   }
 
 }

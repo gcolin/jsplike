@@ -15,13 +15,6 @@
 
 package net.gcolin.optimizer;
 
-import net.gcolin.common.collection.Collections2;
-import net.gcolin.common.io.Io;
-import net.gcolin.server.jsp.Compiler;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -38,9 +31,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.logging.Logger;
 import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+
+import net.gcolin.common.collection.Collections2;
+import net.gcolin.common.io.Io;
+import net.gcolin.server.jsp.Compiler;
 
 /**
  * Process all.
@@ -74,7 +72,7 @@ public class WarProd {
       throws IOException {
     buffer = Io.takeBytes();
     if (logger == null) {
-      logger = LoggerFactory.getLogger(this.getClass());
+      logger = Logger.getLogger(this.getClass().getName());
     }
     logger.info("explode libs");
     Map<String, File> libMap = new HashMap<>();
@@ -124,7 +122,7 @@ public class WarProd {
       Io.close(warZip);
       Io.close(resZip);
       if (tmp.exists() && !tmp.delete()) {
-        logger.warn("cannot delete " + tmp);
+        logger.warning("cannot delete " + tmp);
       }
     }
   }

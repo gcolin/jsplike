@@ -52,6 +52,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 
 public class JExpressionBuilder {
 
@@ -163,7 +164,7 @@ public class JExpressionBuilder {
       // read polish notation
       return toPolishNotation(expression, output, context);
     } catch (Exception ex) {
-      Logs.LOG.error("cannot compile {}", expression);
+      Logs.LOG.log(Level.SEVERE, "cannot compile {0}", expression);
       throw new JspRuntimeException("cannot compile " + expression, ex);
     }
   }

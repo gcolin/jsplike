@@ -20,14 +20,14 @@ import net.gcolin.optimizer.CompressJs;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Closure compression test.
@@ -41,9 +41,9 @@ public class CompressJsTest {
   public void simpleTest() throws IOException {
     Path target = Paths.get("target/compressjs");
     Io.deleteDir(target);
-    Logger logger = LoggerFactory.getLogger(this.getClass());
+    Logger logger = Logger.getLogger(this.getClass().getName());
     if (target.toFile().mkdirs()) {
-      logger.debug("dir {} created", target);
+      logger.log(Level.FINE, "dir {0} created", target);
     }
     Io.copy(Paths.get("src/test/resources/compressjs"), target);
 

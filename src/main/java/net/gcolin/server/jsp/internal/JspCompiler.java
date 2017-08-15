@@ -50,6 +50,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.logging.Level;
 
 import javax.servlet.ServletContext;
 import javax.tools.JavaFileObject.Kind;
@@ -131,18 +132,18 @@ public class JspCompiler {
             dbf.setValidating(false);
             dbf.setXIncludeAware(false);
             dbf.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
-            
+
             Document doc;
             byte[] data = bout.toByteArray();
             DocumentBuilder db = dbf.newDocumentBuilder();
             db.setEntityResolver(new EntityResolver() {
               @Override
               public InputSource resolveEntity(String arg0, String arg1)
-                    throws SAXException, IOException {
+                  throws SAXException, IOException {
                 return new InputSource(new StringReader(""));
               }
             });
-            
+
             try (InputStream in = new ByteArrayInputStream(data)) {
               doc = db.parse(in);
             }
@@ -153,7 +154,7 @@ public class JspCompiler {
             Node node = (Node) expr.evaluate(doc, XPathConstants.NODE);
             if (node != null) {
               String uri = node.getNodeValue().trim();
-              Logs.LOG.info("add taglib {} from {}", uri, path);
+              Logs.LOG.log(Level.INFO, "add taglib {0} from {1}", new Object[] {uri, path});
               scannedTaglib.put(uri, new URL("tld", "", -1, url.getPath(), new URLStreamHandler() {
 
                 @Override
@@ -181,7 +182,7 @@ public class JspCompiler {
         }
       });
     } catch (ScanException ex) {
-      Logs.LOG.warn("error while scanning " + clUrl, ex);
+      Logs.LOG.log(Level.WARNING, "error while scanning " + clUrl, ex);
     }
   }
 

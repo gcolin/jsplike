@@ -30,14 +30,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.logging.Logger;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebFilter;
 import javax.servlet.annotation.WebListener;
 import javax.servlet.annotation.WebServlet;
-
-import org.slf4j.Logger;
 
 import net.gcolin.common.io.Io;
 import net.gcolin.common.reflect.Reflect;
@@ -369,9 +368,9 @@ public class WebAnnotation implements Consumer<Class<?>> {
 
   @Override
   public void accept(Class<?> type) {
-    log.warn("? " + type);
+    log.warning("? " + type);
     if (type.isAnnotationPresent(webservlet)) {
-      log.warn("detect servlet " + type);
+      log.warning("detect servlet " + type);
       servlets.add(type);
     } else if (type.isAnnotationPresent(webfilter)) {
       filters.add(type);

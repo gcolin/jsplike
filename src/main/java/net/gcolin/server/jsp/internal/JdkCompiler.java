@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 import javax.tools.Diagnostic;
@@ -104,7 +105,7 @@ public class JdkCompiler extends AbstractCompiler {
 
 		DiagnosticCollector<JavaFileObject> dlistener = new DiagnosticCollector<>();
 
-		Writer sw = Logs.LOG.isDebugEnabled() ? new StringWriter() : new NullWriter();
+		Writer sw = Logs.LOG.isLoggable(Level.FINE) ? new StringWriter() : new NullWriter();
 
 		List<String> optionList = new ArrayList<>();
 		optionList.add("-encoding");
@@ -120,8 +121,8 @@ public class JdkCompiler extends AbstractCompiler {
 		JavaCompiler.CompilationTask task = javac.getTask(sw, fileManager, dlistener,
 				optionList, null, compilationUnits);
 
-		if (Logs.LOG.isDebugEnabled() && !((StringWriter) sw).isEmpty()) {
-			Logs.LOG.debug(((StringWriter) sw).toString());
+		if (Logs.LOG.isLoggable(Level.FINE) && !((StringWriter) sw).isEmpty()) {
+			Logs.LOG.fine(((StringWriter) sw).toString());
 		}
 
 		sw.close();

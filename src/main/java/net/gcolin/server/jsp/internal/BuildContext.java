@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -120,7 +121,7 @@ public class BuildContext {
           new Expression("net.gcolin.server.jsp.Adapters.params(_c._r)", Dictionary.class,
               Reflect.parseAsGeneric(paramMap, classLoader, 0, paramMap.length()), false));
     } catch (ClassNotFoundException ex) {
-      Logs.LOG.warn("cannot add param", ex);
+      Logs.LOG.log(Level.WARNING, "cannot add param", ex);
     }
   }
 
@@ -406,6 +407,7 @@ public class BuildContext {
    * Enter in a JsPFragment.
    * 
    * @param var the suffix name of the fragment
+   * @param isTag isTag
    * @return the fragment name
    */
   public String pushFragment(String var, boolean isTag) {

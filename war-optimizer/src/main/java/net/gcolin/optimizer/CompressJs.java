@@ -26,8 +26,6 @@ import com.google.javascript.jscomp.SourceFile;
 
 import net.gcolin.common.collection.Func;
 
-import org.slf4j.Logger;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -44,6 +42,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -182,22 +182,22 @@ public class CompressJs {
           errorDirectory = new File("target");
         }
         if (errorDirectory.mkdirs()) {
-          getLog().debug("create directory " + errorDirectory);
+          getLog().fine("create directory " + errorDirectory);
         }
         File file = new File(errorDirectory, "input.js");
-        getLog().error("error while compiling > " + file);
+        getLog().severe("error while compiling > " + file);
         Files.write(file.toPath(), str.toString().getBytes(StandardCharsets.UTF_8));
         for (JSError e : result.errors) {
-          getLog().error(e.toString());
+          getLog().severe(e.toString());
         }
         for (JSError e : result.warnings) {
-          getLog().error(e.toString());
+          getLog().severe(e.toString());
         }
         throw new IOException("error in closure");
       }
     }
 
-    
+
 
     StringBuilder newFileContent = new StringBuilder();
     int prec = 0;
@@ -229,9 +229,9 @@ public class CompressJs {
             StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
         String key = key(part);
         generatedFiles.put(key, script.getAbsoluteFile());
-        getLog().info("create key {}", key);
+        getLog().log(Level.INFO, "create key {0}", key);
       } else {
-        getLog().info("reuse compressed file {}", script);
+        getLog().log(Level.INFO, "reuse compressed file {0}", script);
         scriptFile = script.toPath().toAbsolutePath().toString()
             .substring(data.getWar().toAbsolutePath().toString().length());
       }
@@ -241,8 +241,7 @@ public class CompressJs {
         newFileContent.append(data.getContent().substring(prec, pa[0]));
         if (j == 0) {
           newFileContent.append("<script type=\"text/javascript\" charset=\"utf-8\" src=\"")
-              .append(scriptFile.replace(File.separatorChar, '/'))
-              .append("\"></script>");
+              .append(scriptFile.replace(File.separatorChar, '/')).append("\"></script>");
         }
         prec = pa[1];
       }

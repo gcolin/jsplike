@@ -22,6 +22,7 @@ import net.gcolin.server.jsp.internal.Var;
 
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
 
 public class FmtMessageTagBuilder implements TagBuilder {
 
@@ -74,7 +75,7 @@ public class FmtMessageTagBuilder implements TagBuilder {
     }
 
     if (params.get("scope") != null) {
-      Logs.LOG.info("the attribute scope is not supported in {}", getPath());
+      Logs.LOG.log(Level.INFO, "the attribute scope is not supported in {0}", getPath());
     }
 
   }

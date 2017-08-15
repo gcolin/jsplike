@@ -23,6 +23,7 @@ import net.gcolin.server.jsp.internal.GenericAttribute;
 
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Level;
 
 import javax.servlet.jsp.tagext.SimpleTag;
 
@@ -70,7 +71,7 @@ public class GenericTagBuilder implements TagBuilder {
         writeTag(context, var);
       }
     } else {
-      Logs.LOG.warn("the tag {} is not supported yet.", getPath());
+      Logs.LOG.log(Level.WARNING, "the tag {0} is not supported yet.", getPath());
     }
 
 
@@ -81,7 +82,8 @@ public class GenericTagBuilder implements TagBuilder {
     for (Entry<String, String> e : params.entrySet()) {
       GenericAttribute ga = attributes.get(e.getKey());
       if (ga == null) {
-        Logs.LOG.warn("property {} does not exists in {} see {}", e.getKey(), getPath(), str);
+        Logs.LOG.log(Level.WARNING, "property {0} does not exists in {1} see {2}",
+            new Object[] {e.getKey(), getPath(), str});
       } else {
         context.appendJavaService(var + "." + ga.getMethod().getName() + "("
             + context.buildExpression(e.getValue()).getJavaCall() + ");");

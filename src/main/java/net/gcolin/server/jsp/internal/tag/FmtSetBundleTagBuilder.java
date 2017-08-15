@@ -22,6 +22,7 @@ import net.gcolin.server.jsp.internal.Var;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
 
 public class FmtSetBundleTagBuilder implements TagBuilder {
 
@@ -49,7 +50,7 @@ public class FmtSetBundleTagBuilder implements TagBuilder {
     }
     context.appendVariable(var);
     if (attrs.get("scope") != null) {
-      Logs.LOG.info("the attribute scope is not supported in {}", getPath());
+      Logs.LOG.log(Level.INFO, "the attribute scope is not supported in {0}", getPath());
     }
     String localeVar =
         context.appendVariable(new Var("locale", Var.VarType.SESSION_ATTRIBUTE, Locale.class))

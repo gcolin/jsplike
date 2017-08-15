@@ -21,8 +21,6 @@ import net.gcolin.common.lang.Pair;
 import net.gcolin.server.jsp.Compiler;
 import net.gcolin.server.jsp.internal.JspCompiler;
 
-import org.slf4j.Logger;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -47,6 +45,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 
 /**
  * Precompile JSP and add them to the web.xml or web-fragment.xml.
